@@ -1,0 +1,79 @@
+POST http://localhost:3000/register
+Content-Type: application/json
+
+{
+    "username": "jacob",
+    "email": "jacob@email.com",
+    "password": "password"
+}
+
+###
+
+###
+
+POST http://localhost:3000/login
+Content-Type: application/json
+
+{
+    "email": "one@email.com",
+    "password": "password"
+}
+
+###
+
+POST http://localhost:3000/follow
+Content-Type: application/json
+
+{
+    "user_id": "380876dd4079d847a058d2259618be59dd",
+    "username": "j"
+}
+
+###
+
+POST http://localhost:3000/discover
+Content-Type: application/json
+
+{
+    "username": "one",
+    "input": "o"
+}
+
+###
+
+POST http://localhost:3000/follow_count
+Content-Type: application/json
+
+{
+    "login_id": ""
+}
+
+###
+
+GET https://localhost:3000/upload-url
+Content-Type: application/json
+
+{
+    "pass": "seventee"
+}
+
+###
+POST https://804qbtsf9h.execute-api.us-east-1.amazonaws.com/rout_data/upload-url
+Content-Type: application/json
+
+{
+    "name": "nathan",
+    "date": "06/07/22"
+}
+
+###
+GET https://localhost:3000/users
+
+###
+
+POST https://localhost:3000/search
+Content-Type: application/json
+
+{
+    "count": "5" 
+}
