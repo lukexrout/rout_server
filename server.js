@@ -195,6 +195,14 @@ app.get('/users', async (req, res) => {
 })
 
 
+app.get('/hello', async (req, res) => {
+    try {
+        res.status(200).send('hello world :)')
+    } catch (err) {
+        res.status(400).send(err.message)
+    }
+}
+
 
 const httpsServer = https.createServer(credentials, app)
 
