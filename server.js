@@ -72,12 +72,12 @@ app.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(req.body.password, 12)
         const tokenize = getToken.randomBytes(17)
         const token = tokenize.toString('hex')
-        const users = [req.body.email, req.body.username, hashedPassword, token]
-        console.log(users)
+        const user = [req.body.username, hashedPassword, req.body.email, token]
+        console.log(user)
         
         try {
             const createUser = await pool.query(
-            'INSERT INTO "users" (email, username, password, loginId) VALUES ($1, $2, $3, $4) RETURNING *', users)
+            'INSERT INTO "users" (username, password, email, id) VALUES ($1, $2, $3, $4) RETURNING *', user)
             
             res.json(createUser.rows[0])
         } catch(err) {
