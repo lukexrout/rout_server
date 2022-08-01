@@ -1,11 +1,11 @@
 const Pool = require('pg/lib').Pool
 
 const pool = new Pool({
-    user: 'postgres',
-    password: 'postgres',
-    host: 'rout.cmw3g4zmpga6.us-east-2.rds.amazonaws.com',
+    user: 'rout_admin',
+    password: 'rout_admin',
+    host: 'routdb.cmw3g4zmpga6.us-east-2.rds.amazonaws.com',
     port: 5432,
-    database: 'rout_dev'
+    database: 'rout_data'
     // connectionString: process.env.DATABASE_URL,
     // ssl: {
     //     rejectUnauthorized: false
