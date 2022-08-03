@@ -1,4 +1,3 @@
-// const PORT = process.env.PORT || 3000
 const fs = require('fs')
 const https = require('https');
 const express = require('express')
@@ -13,55 +12,18 @@ const folder = multer({ dest: './assets'})
 
 const privateKey = fs.readFileSync('./localhost-key.pem', 'utf8')
 const certificate = fs.readFileSync('./localhost.pem', 'utf8')
-
-// console.log(privateKey)
-// console.log(certificate)
-
 const credentials = {
     key: privateKey,
     cert: certificate
 }
-// const execSync = require('child_process').execSync
-
-// const output = execSync('heroku config api-inv-fou:get DATABASE_URL', { encoding: 'utf-8' })
-// console.log(output)
-
-// AWS.config.update({
-//     accessKeyId: 'AKIAXGKPKLVUVF7ZSABA',
-//     secretAccessKey: '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'
-// })
-
-// const s3 = new AWS.S3()
-
 
 const app = express()
 
-// app.use(upload())
 app.use(cors({ origin: ['https://localhost:3000']}))
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json())
-// app.use(multer())
 
 //ROUTES//
-
-app.get('/upload-url', async (req, res) => {
-    
-
-    // console.log(req.body.hi)
-    // const URL = s3.getSignedUrl('putObject', {Bucket: 'rout-media-storage', Key: 'photo00', Expires: 60})
-
-    try {
-        res.status(200).send('hello world')
-    } catch (err) {
-        console.log(err) 
-    }
-})
-
-
-
-
-
-
 
 app.post('/register', async (req, res) => {
     const query = await pool.query('SELECT email FROM users WHERE email = $1', [req.body.email])
@@ -87,19 +49,19 @@ app.post('/register', async (req, res) => {
 })
 
 app.post('/login', async (req, res) => {
-    const query = await pool.query('SELECT email FROM users WHERE email = $1', [req.body.email])
-    const query_two = await pool.query('SELECT password FROM users WHERE email = $1', [req.body.email])
-    const ok = query.rows.map(({ email }) => email)
-    const exist = ((query.rows).map(({ email }) => email)).toString()
+    const query = await pool.query('SELECT username FROM users WHERE username = $1', [req.body.username])
+    const query_two = await pool.query('SELECT password FROM users WHERE username = $1', [req.body.username])
+    const ok = query.rows.map(({ username }) => username)
+    const exist = ((query.rows).map(({ username }) => username)).toString()
     const compare = ((query_two.rows).map(({ password }) => password)).toString()
 
-    const query_three = await pool.query('SELECT id FROM users WHERE email = $1', [req.body.email])
+    const query_three = await pool.query('SELECT id FROM users WHERE username = $1', [req.body.username])
     const boo = ((query_three.rows).map(({ id }) => id)).toString()
 
     console.log(ok)
 
-    if (exist !== req.body.email) {
-        return res.status(400).send('User does not exist with this email')
+    if (exist !== req.body.username) {
+        return res.status(400).send('User does not exist with this username')
     } else {
         try {
             if (await bcrypt.compare(req.body.password, compare)) {
@@ -115,59 +77,93 @@ app.post('/login', async (req, res) => {
 })
 
 app.post('/follow', async (req, res) => {
-    const query = await pool.query('SELECT username FROM users WHERE loginid = $1', [req.body.user_id])
-    const username_one = query.rows.map(({ username }) => username).toString()
-    const query_two = await pool.query('SELECT username FROM users WHERE username = $1', [req.body.username])
-    const username_two = query_two.rows.map(({ username }) => username).toString()
-    const follow = [username_one, username_two]
+    const query = await pool.query('SELECT username FROM users WHERE username = $1', [req.body.user])
+    const user = query.rows.map(({ username }) => username).toString()
+    const follow = [req.body.self, user]
+
+    const exist = await pool.query('SELECT _user FROM relations WHERE self = $1 AND _user = $2', [req.body.self, user])
+    const map_exist = exist.rows.map(({ _user }) => _user).length
 
     try{
-        const push = await pool.query('INSERT INTO "follows" (user_one, user_two) VALUES ($1, $2) RETURNING *', follow)
-        res.status(200).send(push.rows)
+        if (map_exist === 1) {
+            res.status(404).send(req.body.user + ' already followed')
+        } else if (map_exist !== 1) {
+            const push = await pool.query('INSERT INTO "relations" (self, _user) VALUES ($1, $2) RETURNING *', follow)
+            res.status(200).send(push.rows)
+        }
     } catch (err) {
         res.status(404).send(err.message)
     }
 })
 
-app.post('/discover', async (req, res) => {
-    const query = await pool.query('SELECT * FROM follows WHERE user_one = $1 AND user_two ~ $2', [req.body.username, req.body.input])
-    const following = query.rows.map(({ user_two }) => user_two)
-    const query_two = await pool.query('SELECT * FROM follows WHERE user_two = $1 AND user_one ~ $2', [req.body.username, req.body.input])
-    const followed = query_two.rows.map(({ user_one }) => user_one)
-    // const query_three = await pool.query('SELECT * FROM users WHERE username ~ $1', [req.body.input])
-    // const users = query_three.rows.map(({ username }) => username)
-    // console.log(users)
-    // const arr = [following, followed]
-    console.log(['Following: ' + following.length, 'Followed: ' + followed.length])
-    if (following.length <= 5) {
-        const followed_num = 5 - following.length
-        var arr = [followed.slice(0, followed_num - 1)]
-        console.log(arr)
-    }
-    try {
-        res.status(200).send([following, followed])
-        // res.status(200).send([users])
-    } catch (err) {
-        res.status(404).send(err.message)
-    }
-})
-
-app.post('/follow_count', async (res, req) => {
-    const query = await pool.query('SELECT user_two FROM follows WHERE user_one = $1', [req.body.login_id])
-    const number_follow = query.rows.map(({ user_two }) => user_two).length
-    console.log(number_follow)
-})
-
-app.post('/search', async (req, res) => {
-
-    const query = await pool.query('SELECT * FROM users LIMIT $1', [req.body.count])
+app.post('/unfollow', async (req, res) => {
+    const query = await pool.query('DELETE FROM relations WHERE self = $1 AND _user = $2', [req.body.self_username, req.body.unfollow_username])
 
     try {
-        res.status(200).send(query.rows)
+        res.status(200).send(req.body.unfollow_username + ' unfollowed.')
     } catch (err) {
         res.status(404).send(err.message)
     }
 })
+
+app.post('/follow_count', async (req, res) => {
+
+    const query = await pool.query('SELECT self FROM relations WHERE _user = $1', [req.body.username])
+    const follow_count = query.rows.map(({ self }) => self).length.toString()
+
+    try {
+        res.status(200).send(follow_count)
+    } catch (err) {
+        res.status(404).send(err.message)
+    }
+
+})
+
+app.post('/follow_list', async (req, res) => {
+
+    const query = await pool.query('SELECT self FROM relations WHERE _user = $1', [req.body.username])
+    const map = query.rows.map(({ self }) => self)
+
+    try {
+        res.status(200).send(map)
+    } catch (err) {
+        res.status(404).send(err.message)
+    }
+})
+
+app.post('/following_count', async (req, res) => {
+
+    const query = await pool.query('SELECT _user FROM relations WHERE self = $1', [req.body.username])
+    const following_count = query.rows.map(({ _user }) => _user).length.toString()
+
+    try {
+        res.status(200).send(following_count)
+    } catch (err) {
+        res.status(404).send(err.message)
+    }
+
+})
+
+app.post('/following_list', async (req, res) => {
+
+    const query = await pool.query('SELECT _user FROM relations WHERE self = $1', [req.body.username])
+    const map = query.rows.map(({ _user }) => _user)
+
+    try {
+        res.status(200).send(map)
+    } catch (err) {
+        res.status(404).send(err.message)
+    }
+
+})
+
+
+
+
+
+
+
+
 
 
 
@@ -195,32 +191,20 @@ app.get('/users', async (req, res) => {
 })
 
 
-app.get('/hello', async (req, res) => {
-    try {
-        res.status(200).send('hello world :)')
-    } catch (err) {
-        res.status(400).send(err.message)
-    }
-})
+app.post('/get_user', async (req, res) => {
 
+    const query = await pool.query('SELECT * FROM users WHERE username ~ $1', [req.body.user])
+    const user_list = query.rows.map(({ username }) => username)
+
+    try {
+        res.status(200).send(user_list)
+    } catch (err) {
+        res.status(404).send(err.message)
+    }
+
+})
 
 const httpsServer = https.createServer(credentials, app)
 
-// console.log(httpsServer.listen)
-
-
 // app.listen(3000, () => {console.log('server has started on port 3000')})
 httpsServer.listen(3000, () => {console.log('server has started on port ' + 3000)})
-
-
-
-
-
-// psql ^
-// --host=<DB instance endpoint> ^
-// --port=<port> ^
-// --username=<master username> ^
-// --password ^
-// --dbname=<database name> 
-
-// psql --host=rout.cmw3g4zmpga6.us-east-2.rds.amazonaws.com --port=5432 --username=postgres --password --dbname=routdev
