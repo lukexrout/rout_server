@@ -5,21 +5,30 @@ const pool = require('./db')
 const cors = require('cors')
 const bcrypt = require('bcrypt')
 const getToken = require('crypto');
-const AWS = require('aws-sdk')
 const multer = require('multer')
 
-const folder = multer({ dest: './assets'})
+// depricated ////////////////////////////////
+// const privateKey = fs.readFileSync('./localhost-key.pem', 'utf8')
+// const certificate = fs.readFileSync('./localhost.pem', 'utf8')
+// const credentials = {
+//     key: privateKey,
+//     cert: certificate
+// }
+// depricated ///////////////////////////////
 
-const privateKey = fs.readFileSync('./localhost-key.pem', 'utf8')
-const certificate = fs.readFileSync('./localhost.pem', 'utf8')
-const credentials = {
-    key: privateKey,
-    cert: certificate
-}
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'assets/')
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.fieldname + '-' + Date.now())
+    }
+})
+const upload = multer({ storage: storage})
 
 const app = express()
 
-app.use(cors({ origin: ['https://localhost:3000']}))
+app.use(cors({ origin: '*'}))
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json())
 
@@ -76,6 +85,19 @@ app.post('/login', async (req, res) => {
     }
 })
 
+app.post('/profile_user', async (req, res) => {
+    const query = await pool.query('SELECT username FROM users WHERE id = $1', [req.body.self])
+    const username = query.rows.map(({ username }) => username).toString()
+
+
+    try {
+        res.status(200).send(username)
+    } catch (err) {
+        res.status(404).send(err.message)
+    }
+
+})
+
 app.post('/follow', async (req, res) => {
     const query = await pool.query('SELECT username FROM users WHERE username = $1', [req.body.user])
     const user = query.rows.map(({ username }) => username).toString()
@@ -97,7 +119,7 @@ app.post('/follow', async (req, res) => {
 })
 
 app.post('/unfollow', async (req, res) => {
-    const query = await pool.query('DELETE FROM relations WHERE self = $1 AND _user = $2', [req.body.self_username, req.body.unfollow_username])
+    const query = await pool.query('DELETE FROM relations WHERE self = $1 AND _user = $2', [req.body.self, req.body.user])
 
     try {
         res.status(200).send(req.body.unfollow_username + ' unfollowed.')
@@ -157,6 +179,50 @@ app.post('/following_list', async (req, res) => {
 
 })
 
+app.post('/follow_check', async (req, res) => {
+
+    const query = await pool.query('SELECT _user FROM relations WHERE self = $1 AND _user = $2', [req.body.self, req.body._user])
+    const map = query.rows.map(({ _user }) => _user)
+
+    console.log(map)
+
+    let i = null
+
+    {map.length === 0 ? i = false : i = true }
+
+    try {
+        res.status(200).send(i)
+    } catch (err) {
+        res.status(404).send(err.message)
+    }
+
+
+})
+
+app.post('/search', async (req, res) => {
+
+    const query = await pool.query('SELECT * FROM users WHERE username ~ $1 LIMIT $2', [req.body._user, req.body.count])
+    const map = query.rows.map(({ username }) => username)
+
+    try {
+        res.status(200).send(map)
+    } catch (err) {
+        res.status(404).send(err.message)
+    }
+
+})
+
+app.post('/upload', upload.single('file'), async (req, res) => {
+    console.log(req.files) 
+
+    try {
+        res.status(200).send({ success: true })
+        // console.log(res)
+    } catch (err) {
+        res.status(404).send(err.message)
+    }
+
+})
 
 
 
@@ -172,10 +238,7 @@ app.post('/following_list', async (req, res) => {
 
 
 
-
-
-
-
+// dev
 
 app.get('/users', async (req, res) => {
     const query = await pool.query('SELECT * FROM users;')
@@ -192,7 +255,6 @@ app.get('/users', async (req, res) => {
 
 
 app.post('/get_user', async (req, res) => {
-
     const query = await pool.query('SELECT * FROM users WHERE username ~ $1', [req.body.user])
     const user_list = query.rows.map(({ username }) => username)
 
@@ -204,7 +266,9 @@ app.post('/get_user', async (req, res) => {
 
 })
 
-const httpsServer = https.createServer(credentials, app)
+app.listen(3000, () => {console.log('server has started on port 3000')})
 
-// app.listen(3000, () => {console.log('server has started on port 3000')})
-httpsServer.listen(3000, () => {console.log('server has started on port ' + 3000)})
+// depricated //
+// const httpsServer = https.createServer(credentials, app)
+// httpsServer.listen(3000, () => {console.log('server has started on port ' + 3000)})
+// depricated //
