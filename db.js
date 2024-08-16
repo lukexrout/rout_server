@@ -3,7 +3,7 @@ const Pool = require('pg/lib').Pool
 const pool = new Pool({
     user: 'rout_admin',
     password: 'rout_admin',
-    host: 'routdb.cmw3g4zmpga6.us-east-2.rds.amazonaws.com',
+    host: '',
     port: 5432,
     database: 'rout_data'
     // connectionString: process.env.DATABASE_URL,
